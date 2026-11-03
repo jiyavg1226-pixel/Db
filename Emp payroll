@@ -1,0 +1,193 @@
+Import tkinter as tk
+From tkinter import ttk, messagebox
+From pymongo import MongoClient
+# MongoDB Connection
+Client = MongoClient(“mongodb://localhost:27017/”)
+Db = client[“PayrollDB”]
+Collection = db[“Employees”]
+# Main Windo
+Root = tk.Tk()
+Root.title(“Employee Payroll Management System”)
+Root.geometry(“950x650”)
+Root.configure(bg=”lightblue”)
+# Salary Calculation
+Def calculate_salary():
+ Try:
+ Basic = float(basic_entry.get())
+ Hra = basic * 0.20
+ Da = basic * 0.10
+ Pf = basic * 0.12
+ Gross = basic + hra + da
+ Net = gross – pf Hra_entry.delete(0, tk.END)
+ Hra_entry.insert(0, str(round(hra, 2)))
+ Da_entry.delete(0, tk.END)
+ Da_entry.insert(0, str(round(da, 2)))
+ Pf_entry.delete(0, tk.END)
+ Pf_entry.insert(0, str(round(pf, 2)))
+ Gross_entry.delete(0, tk.END)
+ Gross_entry.insert(0, str(round(gross, 2)))
+ Net_entry.delete(0, tk.END)
+ Net_entry.insert(0, str(round(net, 2)))
+ Return hra, da, pf, gross, net
+ Except ValueError:
+ Messagebox.showerror(“Error”, “Enter valid Basic Salary”)
+ Return None
+# Clear Fields
+Def clear():
+ For entry in entries:
+ Entry.delete(0, tk.END) # Insert Employee
+Def insert():
+ Try:
+ Salary = calculate_salary()
+ If salary is None:
+ Return
+ Emp = {
+ “emp_id”: emp_id_entry.get(),
+ “name”: name_entry.get(),
+ “department”: dept_entry.get(),
+ “basic”: float(basic_entry.get()),
+ “hra”: salary[0],
+ “da”: salary[1],
+ “pf”: salary[2],
+ “gross”: salary[3],
+ “net”: salary[4]
+ }
+ If not emp[“emp_id”] or not emp[“name”]:
+ Messagebox.showerror(“Error”, “Enter Employee ID and Name”)
+ Return
+ If collection.find_one({“emp_id”: emp[“emp_id”]}): Messagebox.showerror(“Error”, “Employee ID already exists”)
+ Return
+ Collection.insert_one(emp)
+ Messagebox.showinfo(“Success”, “Employee Inserted Successfully”)
+ Display()
+ Clear()
+ Except ValueError:
+ Messagebox.showerror(“Error”, “Enter valid salary”)
+# Update Employee
+Def update():
+ Try:
+ Salary = calculate_salary()
+ If salary is None:
+ Return
+ Emp_id = emp_id_entry.get()
+ If not emp_id:
+ Messagebox.showerror(“Error”, “Enter Employee ID”)
+ Return
+ Result = collection.update_one( {“emp_id”: emp_id},
+ {“$set”: {
+ “name”: name_entry.get(),
+ “department”: dept_entry.get(),
+ “basic”: float(basic_entry.get()),
+ “hra”: salary[0],
+ “da”: salary[1],
+ “pf”: salary[2],
+ “gross”: salary[3],
+ “net”: salary[4]
+ }}
+ )
+ If result.matched_count:
+ Messagebox.showinfo(“Success”, “Employee Updated”)
+ Display()
+ Clear()
+ Else:
+ Messagebox.showerror(“Error”, “Employee Not Found”)
+ Except ValueError:
+ Messagebox.showerror(“Error”, “Enter valid salary”)
+# Delete Employee
+Def delete(): Emp_id = emp_id_entry.get()
+ Result = collection.delete_one({“emp_id”: emp_id})
+ If result.deleted_count:
+ Messagebox.showinfo(“Success”, “Employee Deleted”)
+ Display()
+ Clear()
+ Else:
+ Messagebox.showerror(“Error”, “Employee Not Found”)
+# Search Employee
+Def search():
+ Emp_id = emp_id_entry.get()
+ Emp = collection.find_one({“emp_id”: emp_id})
+ If emp:
+ Clear()
+ Emp_id_entry.insert(0, emp[“emp_id”])
+ Name_entry.insert(0, emp[“name”])
+ Dept_entry.insert(0, emp[“department”])
+ Basic_entry.insert(0, emp[“basic”])
+ Hra_entry.insert(0, emp[“hra”])
+ Da_entry.insert(0, emp[“da”]) Pf_entry.insert(0, emp[“pf”])
+ Gross_entry.insert(0, emp[“gross”])
+ Net_entry.insert(0, emp[“net”])
+ Else:
+ Messagebox.showerror(“Error”, “Employee Not Found”)
+# Display Employees
+Def display():
+ For row in tree.get_children():
+ Tree.delete(row)
+ For emp in collection.find():
+ Tree.insert(“”, tk.END, values=(
+ Emp[“emp_id”],
+ Emp[“name”],
+ Emp[“department”],
+ Emp[“basic”],
+ Emp[“gross”],
+ Emp[“net”]
+ ))
+# Exit
+Def exit_app():
+ Client.close() Root.destroy()
+# Heading
+Tk.Label(
+ Root,
+ Text=”EMPLOYEE PAYROLL MANAGEMENT SYSTEM”,
+ Font=(“Arial”, 18, “bold”),
+ Bg=”lightblue”
+).pack(pady=10)
+# Form
+Form = tk.Frame(root, bg=”lightblue”)
+Form.pack()
+Labels = [
+ “Employee ID”, “Employee Name”, “Department”,
+ “Basic Salary”, “HRA”, “DA”, “PF”,
+ “Gross Salary”, “Net Salary”
+]
+Entries = []
+For I, label in enumerate(labels):
+ Tk.Label(
+ Form, text=label, font=(“Arial”, 11), Bg=”lightblue”
+ ).grid(row=I, column=0, padx=10, pady=5)
+ Entry = tk.Entry(form, width=25)
+ Entry.grid(row=I, column=1, padx=10, pady=5)
+ Entries.append(entry)
+(emp_id_entry, name_entry, dept_entry, basic_entry,
+Hra_entry, da_entry, pf_entry, gross_entry,
+Net_entry) = entries
+# Buttons
+Btn_frame = tk.Frame(root, bg=”lightblue”)
+Btn_frame.pack(pady=15)
+Buttons = [
+ (“Insert”, insert),
+ (“Update”, update),
+ (“Delete”, delete),
+ (“Search”, search),
+ (“Display”, display),
+ (“Calculate”, calculate_salary),
+ (“Clear”, clear),
+ (“Exit”, exit_app)
+] For I, (text, command) in enumerate(buttons):
+ Tk.Button(
+ Btn_frame,
+ Text=text,
+ Width=12,
+ Command=command
+ ).grid(row=I // 4, column=I % 4, padx=5, pady=5)
+# Employee Table
+Columns = (“ID”, “Name”, “Department”, “Basic”, “Gross”, “Net”)
+Tree = ttk.Treeview(
+ Root, columns=columns, show=”headings”, height=8
+)
+For col in columns:
+ Tree.heading(col, text=col)
+ Tree.column(col, width=130)
+Tree.pack(pady=10)
+Display()
+Root.protocol(“WM_DELETE_WINDOW”, exit_app)
+Root.mainloop()
